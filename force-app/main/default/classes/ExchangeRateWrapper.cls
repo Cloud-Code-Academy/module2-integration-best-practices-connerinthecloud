@@ -6,7 +6,7 @@ public class ExchangeRateWrapper {
     // Add properties for base currency
     public String base_code;    
     // Add property for time last updated
-    public Integer time_last_update_unix;
+    public String time_last_update_unix;
     
     // Add property for rates (using a map)
     public Map<String, Decimal> conversion_rates;
@@ -25,21 +25,23 @@ public class ExchangeRateWrapper {
      * @description Converts the wrapper data to a list of Exchange_Rate__c records
      * @return List<Exchange_Rate__c> The list of exchange rate records
      */
-    public List<Exchange_Rate__c> toExchangeRates() {
+    public List<Exchange_Rate__c> toExchangeRates(ExchangeRateWrapper rateData) {
         // 1. Create a list to hold the Exchange_Rate__c records
         // 2. Iterate through the rates map
         // 3. For each rate, create an Exchange_Rate__c record
         // 4. Return the list of records
+        base_code = rateData.base_code;
+        Long unixTime = Long.valueof(time_last_update_unix);
+        Long unixMiliseconds = unixTime * 1000;
         List<Exchange_Rate__c> exchngRateList = new List<Exchange_Rate__c>();
-        for (String isoCurrencyCode : conversion_rates.keySet()) {
+        for (String isoCurrencyCode : rateData.conversion_rates.keySet()) {
             Exchange_Rate__c exchngRate = new Exchange_Rate__c();
-            exchngRate.Name = base_code + '-->' + isoCurrencyCode;
+            exchngRate.Name = base_code + '_' + isoCurrencyCode;
             exchngRate.Base_Currency__c = base_code;
             exchngRate.Target_Currency__c = isoCurrencyCode;
-            exchngRate.Last_Updated__c = Datetime.newInstance(time_last_update_unix);
-            exchngRate.Rate__c = conversion_rates.get(isoCurrencyCode);
+            exchngRate.Last_Updated__c = DateTime.newInstance(unixMiliseconds);
+            exchngRate.Rate__c = rateData.conversion_rates.get(isoCurrencyCode);
             exchngRate.External_Id__c = base_code + isoCurrencyCode;
-
             exchngRateList.add(exchngRate);
         }
         
