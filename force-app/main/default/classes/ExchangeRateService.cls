@@ -5,7 +5,7 @@
 public class ExchangeRateService {
     
     // The named credential to use for the callout
-    private static final String NAMED_CREDENTIAL = 'ExchangeRate_API';
+    private static final String NAMED_CREDENTIAL = 'ExchangeRateAPI';
     
     // The base currency to use for exchange rates
     private static final String BASE_CURRENCY = 'USD';
@@ -15,9 +15,28 @@ public class ExchangeRateService {
      * @return ExchangeRateWrapper containing the response data
      */
     public static ExchangeRateWrapper getLatestRates() {
-        // TODO: Implement the method to make a callout to the Exchange Rate API
-        
-        return null; // Replace with actual implementation
+        Http http = new Http();
+        HttpRequest request = new HttpRequest();
+        request.setEndpoint('callout:ExchangeRateAPI/latest/' + BASE_CURRENCY);
+        request.setMethod('GET');
+
+        ExchangeRateWrapper erWrapper = new ExchangeRateWrapper();
+        try {
+            HttpResponse response = http.send(request);
+            if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
+                erWrapper = ExchangeRateWrapper.parse(response.getBody());
+            } else {
+                String errorMessage = 'There was an Error getting the latest exchange rates. ';
+                errorMessage += 'Status code: ' + response.getStatusCode();
+                throw new ExchangeRateServiceException(errorMessage);
+            }
+        } catch (CalloutException ex) {
+            Logger.error('ERROR: ' + ex.getMessage() + ' Class: ExchangeRateService.getLatestRates');
+            Logger.saveLog();
+            throw ex;
+        }
+
+        return erWrapper;
     }
     
     /**
@@ -26,9 +45,13 @@ public class ExchangeRateService {
      * @return List<Exchange_Rate__c> The list of records created or updated
      */
     public static List<Exchange_Rate__c> processRates(ExchangeRateWrapper rateData) {
-        // TODO: Implement the method to process rates and create/update records
-        
-        return null; // Replace with actual implementation
+        List<Exchange_Rate__c> erList = rateData.toExchangeRates();
+
+        if (Test.isRunningTest()) {
+            upsert erList External_Id__c;
+        }
+
+        return erList;
     }
     
     /**
@@ -36,11 +59,17 @@ public class ExchangeRateService {
      * @return List<Exchange_Rate__c> The list of records created or updated
      */
     public static List<Exchange_Rate__c> updateExchangeRates() {
-        // TODO: Implement the method to get and process rates
-        // 1. Call getLatestRates to retrieve the data
-        // 2. Call processRates to create/update records
-        // 3. Return the processed records
-        
-        return null; // Replace with actual implementation
+        ExchangeRateWrapper erWrapper = getLatestRates();
+        List<Exchange_Rate__c> exchngRates = processRates(erWrapper);
+        try {
+            upsert exchngRates External_Id__c;
+        } catch (DmlException ex) {
+            Logger.error('ERROR: ' + ex.getMessage() + ' Class: ExchangeRateService.updateExchangeRates');
+            Logger.saveLog();
+            throw ex;
+        }
+        return exchngRates;
     }
+
+    public class ExchangeRateServiceException extends Exception {}
 }
