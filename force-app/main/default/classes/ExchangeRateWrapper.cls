@@ -25,22 +25,17 @@ public class ExchangeRateWrapper {
      * @description Converts the wrapper data to a list of Exchange_Rate__c records
      * @return List<Exchange_Rate__c> The list of exchange rate records
      */
-    public List<Exchange_Rate__c> toExchangeRates(ExchangeRateWrapper rateData) {
-        // 1. Create a list to hold the Exchange_Rate__c records
-        // 2. Iterate through the rates map
-        // 3. For each rate, create an Exchange_Rate__c record
-        // 4. Return the list of records
-        base_code = rateData.base_code;
-        Long unixTime = Long.valueof(time_last_update_unix);
-        Long unixMiliseconds = unixTime * 1000;
+    public List<Exchange_Rate__c> toExchangeRates() {
+        DateTime unixTimeMiliseconds = DateTime.newInstance(Long.valueof(time_last_update_unix)*1000);
         List<Exchange_Rate__c> exchngRateList = new List<Exchange_Rate__c>();
-        for (String isoCurrencyCode : rateData.conversion_rates.keySet()) {
+
+        for (String isoCurrencyCode : conversion_rates.keySet()) {
             Exchange_Rate__c exchngRate = new Exchange_Rate__c();
             exchngRate.Name = base_code + '_' + isoCurrencyCode;
             exchngRate.Base_Currency__c = base_code;
             exchngRate.Target_Currency__c = isoCurrencyCode;
-            exchngRate.Last_Updated__c = DateTime.newInstance(unixMiliseconds);
-            exchngRate.Rate__c = rateData.conversion_rates.get(isoCurrencyCode);
+            exchngRate.Last_Updated__c = unixTimeMiliseconds;
+            exchngRate.Rate__c = conversion_rates.get(isoCurrencyCode);
             exchngRate.External_Id__c = base_code + isoCurrencyCode;
             exchngRateList.add(exchngRate);
         }
@@ -54,10 +49,7 @@ public class ExchangeRateWrapper {
      * @return ExchangeRateWrapper The parsed wrapper instance
      */
     public static ExchangeRateWrapper parse(String jsonResponse) {
-        // TODO: Implement the method to parse the JSON response
-        // Use JSON.deserialize or JSON.deserializeStrict to parse the response
-        ExchangeRateWrapper exchRateWrapper = (ExchangeRateWrapper) JSON.deserialize(jsonResponse, ExchangeRateWrapper.class);
 
-        return exchRateWrapper; // Replace with actual implementation
+        return (ExchangeRateWrapper) JSON.deserialize(jsonResponse, ExchangeRateWrapper.class);
     }
 }

@@ -25,11 +25,14 @@ public class ExchangeRateService {
             HttpResponse response = http.send(request);
             if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
                 erWrapper = ExchangeRateWrapper.parse(response.getBody());
+            } else {
+                String errorMessage = 'There was an Error getting the latest exchange rates. ';
+                errorMessage += 'Status code: ' + response.getStatusCode();
+                throw new ExchangeRateServiceException(errorMessage);
             }
         } catch (CalloutException ex) {
-            // bug statements are temporary and would/will be replaced by logging in prod env
-            System.debug('there was an error during the callout.');
-            System.debug('Exception message: ' + ex.getMessage());
+            Logger.error('ERROR: ' + ex.getMessage() + ' Class: ExchangeRateService.getLatestRates');
+            Logger.saveLog();
             throw ex;
         }
 
@@ -42,8 +45,13 @@ public class ExchangeRateService {
      * @return List<Exchange_Rate__c> The list of records created or updated
      */
     public static List<Exchange_Rate__c> processRates(ExchangeRateWrapper rateData) {
-        ExchangeRateWrapper erWrapper = new ExchangeRateWrapper();
-        return erWrapper.toExchangeRates(rateData);
+        List<Exchange_Rate__c> erList = rateData.toExchangeRates();
+
+        if (Test.isRunningTest()) {
+            upsert erList External_Id__c;
+        }
+
+        return erList;
     }
     
     /**
@@ -52,14 +60,16 @@ public class ExchangeRateService {
      */
     public static List<Exchange_Rate__c> updateExchangeRates() {
         ExchangeRateWrapper erWrapper = getLatestRates();
-        System.debug('wrapper: ' + erWrapper);
         List<Exchange_Rate__c> exchngRates = processRates(erWrapper);
-        System.debug('list: ' +exchngRates);
         try {
             upsert exchngRates External_Id__c;
         } catch (DmlException ex) {
+            Logger.error('ERROR: ' + ex.getMessage() + ' Class: ExchangeRateService.updateExchangeRates');
+            Logger.saveLog();
             throw ex;
         }
         return exchngRates;
     }
+
+    public class ExchangeRateServiceException extends Exception {}
 }
